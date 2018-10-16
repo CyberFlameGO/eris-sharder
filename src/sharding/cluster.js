@@ -166,7 +166,7 @@ class Cluster {
         });
         
         bot.on("debug", (msg, id) => {
-            process.send({name: "debug", msg: `${id} | ${msg`});
+            process.send({name: "debug", msg: `${id} | ${msg}`});
         });
 
         bot.on("shardDisconnect", (err, id) => {
