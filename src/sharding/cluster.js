@@ -164,6 +164,10 @@ class Cluster {
         bot.on("connect", id => {
             process.send({ name: "log", msg: `Shard ${id} established connection!` });
         });
+        
+        bot.on("debug", (msg, id) => {
+            process.send({name: "debug", msg: `${id} | ${msg`});
+        });
 
         bot.on("shardDisconnect", (err, id) => {
             process.send({ name: "log", msg: `Shard ${id} disconnected!` });
