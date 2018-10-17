@@ -1,6 +1,8 @@
 const Eris = require("eris");
 const Base = require("../structures/Base.js");
 const utils = require("util");
+const { StatsD } = require('node-dogstatsd');
+const ddog = new StatsD();
 
 /**
  * 
@@ -42,10 +44,12 @@ class Cluster {
 
     spawn() {
         process.on('uncaughtException', (err) => {
+            ddog.increment('es.uncaughtException');
             process.send({ name: "error", msg: err.stack });
         });
 
         process.on('unhandledRejection', (reason, p) => {
+            ddog.increment('es.unhandledRejection');
             process.send({ name: "error", msg: `Unhandled rejection at: Promise  ${p} reason:  ${reason.stack}` });
         });
 
@@ -98,6 +102,7 @@ class Cluster {
                         });
                         break;
                     case "fetchUser":
+                        ddog.increment('es.fetch.user');
                         let id = msg.value;
                         let user = this.bot.users.get(id);
                         if (user) {
@@ -105,6 +110,7 @@ class Cluster {
                         }
                         break;
                     case "fetchChannel":
+                        ddog.increment('es.fetch.channel');
                         let id2 = msg.value;
                         let channel = this.bot.getChannel(id2);
                         if (channel) {
@@ -113,6 +119,7 @@ class Cluster {
                         }
                         break;
                     case "fetchGuild":
+                        ddog.increment('es.fetch.guild');
                         let id3 = msg.value;
                         let guild = this.bot.guilds.get(id3);
                         if (guild) {
@@ -162,6 +169,7 @@ class Cluster {
         const bot = new Eris(token, options);
         this.bot = bot;
         bot.on("connect", id => {
+            ddog.increment('es.event.connect');
             process.send({ name: "log", msg: `Shard ${id} established connection!` });
         });
         
@@ -170,9 +178,19 @@ class Cluster {
             process.send({name: "debug", msg: `${id} | ${msg}`});
         });
 
+        bot.on("hello", (msg, id) => {
+            ddog.increment('es.event.hello');
+        });
+
+        bot.on("unknown", (msg, id) => {
+            ddog.increment('es.event.unknown');
+        });
+
         bot.on("shardDisconnect", (err, id) => {
+            ddog.increment('es.event.shardDisconnect');
             process.send({ name: "log", msg: `Shard ${id} disconnected!` });
             let embed = {
+                color: 16711680,
                 title: "Shard Status Update",
                 description: `Shard ${id} disconnected!`
             }
@@ -180,8 +198,10 @@ class Cluster {
         });
 
         bot.on("shardReady", id => {
+            ddog.increment('es.event.shardReady');
             process.send({ name: "log", msg: `Shard ${id} is ready!` });
             let embed = {
+                color: 65280,
                 title: "Shard Status Update",
                 description: `Shard ${id} is ready!`
             }
@@ -189,8 +209,10 @@ class Cluster {
         });
 
         bot.on("shardResume", id => {
+            ddog.increment('es.event.shardResume');
             process.send({ name: "log", msg: `Shard ${id} has resumed!` });
             let embed = {
+                color: 255,
                 title: "Shard Status Update",
                 description: `Shard ${id} resumed!`
             }
@@ -198,10 +220,12 @@ class Cluster {
         });
 
         bot.on("warn", (message, id) => {
+            ddog.increment('es.event.warn');
             process.send({ name: "warn", msg: `Shard ${id} | ${message}` });
         });
 
         bot.on("error", (error, id) => {
+            ddog.increment('es.event.error');
             process.send({ name: "error", msg: `Shard ${id} | ${error.stack}` });
         });
 
@@ -212,8 +236,10 @@ class Cluster {
         });
 
         bot.on("ready", id => {
+            ddog.increment('es.event.clusterReady');
             process.send({ name: "log", msg: `Shards ${this.firstShardID} - ${this.lastShardID} are ready!` });
             let embed = {
+                color: 65280,
                 title: `Cluster ${this.clusterID} is ready!`,
                 description: `Shards ${this.firstShardID} - ${this.lastShardID}`
             }
