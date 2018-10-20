@@ -191,7 +191,6 @@ class Cluster {
             ddog.increment('es.event.shardDisconnect');
             process.send({ name: "log", msg: `Shard ${id} disconnected!` });
             let embed = {
-                color: 16711680,
                 title: "Shard Status Update",
                 description: `Shard ${id} disconnected!`
             }
@@ -202,7 +201,6 @@ class Cluster {
             ddog.increment('es.event.shardReady');
             process.send({ name: "log", msg: `Shard ${id} is ready!` });
             let embed = {
-                color: 65280,
                 title: "Shard Status Update",
                 description: `Shard ${id} is ready!`
             }
@@ -213,7 +211,6 @@ class Cluster {
             ddog.increment('es.event.shardResume');
             process.send({ name: "log", msg: `Shard ${id} has resumed!` });
             let embed = {
-                color: 255,
                 title: "Shard Status Update",
                 description: `Shard ${id} resumed!`
             }
@@ -240,7 +237,6 @@ class Cluster {
             ddog.increment('es.event.clusterReady');
             process.send({ name: "log", msg: `Shards ${this.firstShardID} - ${this.lastShardID} are ready!` });
             let embed = {
-                color: 65280,
                 title: `Cluster ${this.clusterID} is ready!`,
                 description: `Shards ${this.firstShardID} - ${this.lastShardID}`
             }
