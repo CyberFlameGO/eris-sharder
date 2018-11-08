@@ -173,11 +173,11 @@ class Cluster {
             process.send({ name: "log", msg: `Shard ${id} established connection!` });
         });
         
-        /*
+        
         bot.on("debug", (msg, id) => {
             if (msg.includes('Duplicate presence update') || msg.includes('"op":1')) return
             process.send({name: "debug", msg: `${id} | ${msg}`});
-        });*/
+        });
 
         bot.on("hello", (msg, id) => {
             ddog.increment('es.event.hello');
