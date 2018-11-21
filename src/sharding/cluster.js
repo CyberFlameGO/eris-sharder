@@ -190,18 +190,12 @@ class Cluster {
         bot.on("shardDisconnect", (err, id) => {
             ddog.increment('es.event.shardDisconnect');
             process.send({ name: "log", msg: `Shard ${id} disconnected!` });
-            let embed
-            if (err) {
-                embed = {
-                title: "DISCONNECTED SHARD: ${id}",
-                description: err
-                }
-            } else {
+
                 embed = {
                 title: "Shard Status Update",
                 description: `Shard ${id} disconnected!`
                 }
-            }
+
             process.send({ name: "shard", embed: embed });
         });
 
