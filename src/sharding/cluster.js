@@ -191,12 +191,14 @@ class Cluster {
             ddog.increment('es.event.shardDisconnect');
             process.send({ name: "log", msg: `Shard ${id} disconnected!` });
 
-                let embed = {
+            /*
+            let embed = {
                 title: "Shard Status Update",
                 description: `Shard ${id} disconnected!`
-                }
+            }
+            */
 
-            process.send({ name: "shard", embed: embed });
+            process.send({ name: "shard", content: `**Shard Status Update**\nShard ${id} disconnected!\n<@&514854536075018256>` });
         });
 
         bot.on("shardReady", id => {
