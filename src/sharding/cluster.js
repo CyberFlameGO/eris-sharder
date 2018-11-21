@@ -191,7 +191,7 @@ class Cluster {
             ddog.increment('es.event.shardDisconnect');
             process.send({ name: "log", msg: `Shard ${id} disconnected!` });
 
-                embed = {
+                let embed = {
                 title: "Shard Status Update",
                 description: `Shard ${id} disconnected!`
                 }
