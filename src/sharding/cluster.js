@@ -175,7 +175,7 @@ class Cluster {
         
         
         bot.on("debug", (msg, id) => {
-            if (msg.includes('Duplicate presence update') || msg.includes('"op":1') || msg.startsWith('undefined |')) return
+            if (msg.includes('Duplicate presence update') || msg.includes('"op":1') || msg.includes('undefined')) return
             process.send({name: "debug", msg: `${id} | ${msg}`});
         });
 
@@ -190,9 +190,16 @@ class Cluster {
         bot.on("shardDisconnect", (err, id) => {
             ddog.increment('es.event.shardDisconnect');
             process.send({ name: "log", msg: `Shard ${id} disconnected!` });
-            let embed = {
+            if (err) {
+                let embed = {
+                title: "DISCONNECTED SHARD: ${id}",
+                description: err
+                }
+            } else {
+                let embed = {
                 title: "Shard Status Update",
                 description: `Shard ${id} disconnected!`
+                }
             }
             process.send({ name: "shard", embed: embed });
         });
