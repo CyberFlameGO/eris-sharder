@@ -54,7 +54,7 @@ class Cluster {
         });
 
 
-        process.on("message", this._handleMessage);
+        process.on("message", this._handleMessage.bind(this));
     }
 
     _handleMessage (msg) {
