@@ -4,12 +4,14 @@ class IPC extends EventEmitter {
         super();
         this.events = new Map();
 
-        process.on("message", msg => {
-            let event = this.events.get(msg._eventName);
-            if (event) {
-                event.fn(msg);
-            }
-        });
+        process.on("message", this._handleMessage.bind(this));
+    }
+
+    _handleMessage(msg) {
+        let event = this.events.get(msg._eventName);
+        if (event) {
+            event.fn(msg);
+        }
     }
 
     register(event, callback) {
