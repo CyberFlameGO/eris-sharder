@@ -161,7 +161,7 @@ class ClusterManager extends EventEmitter {
                     logger.info("Cluster Manager", `Starting ${this.shardCount} shards in ${this.clusterCount} clusters`);
 
                     master.setupMaster({
-                        silent: true
+                        silent: false
                     });
                     // Fork workers.
                     this.start(this.clusterCount, 0);
@@ -177,7 +177,7 @@ class ClusterManager extends EventEmitter {
                             this.sendWebhook("cluster", embed);
 
                             master.setupMaster({
-                                silent: true
+                                silent: false
                             });
                             // Fork workers.
                             this.start(this.clusterCount, 0);
