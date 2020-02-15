@@ -238,14 +238,6 @@ class Cluster {
             this.startStats(bot);
         });
 
-        bot.on('connect', (id) => {
-            if (id === bot.lastShardID) {
-                setTimeout(() => {
-                   process.send({ name: 'shardsStarted' });
-                }, 5500);
-            }
-        })
-
         bot.on("ready", id => {
             ddog.increment('es.event.clusterReady');
             process.send({ name: "log", msg: `Shards ${this.firstShardID} - ${this.lastShardID} are ready!` });
@@ -255,11 +247,13 @@ class Cluster {
             }
             process.send({ name: "cluster", embed: embed });
 
+            process.send({ name: "shardsStarted" });
         });
 
         if (!this.test) {
             bot.connect();
         } else {
+            process.send({ name: "shardsStarted" });
             this.loadCode(bot);
         }
     }
