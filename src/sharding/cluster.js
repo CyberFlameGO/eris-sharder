@@ -1,6 +1,8 @@
 const Eris = require("eris");
 const Base = require("../structures/Base.js");
 const { inspect } = require('util');
+const { StatsD } = require('node-dogstatsd');
+const ddog = new StatsD();
 
 /**
  * 
