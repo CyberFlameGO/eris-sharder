@@ -155,7 +155,7 @@ class Cluster {
                         break;
                 }
             }
-        }
+        })
     }
 
     /**
