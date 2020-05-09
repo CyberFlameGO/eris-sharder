@@ -1,4 +1,5 @@
 const colors = require('colors');
+
 colors.setTheme({
     silly: 'rainbow',
     log: 'grey',

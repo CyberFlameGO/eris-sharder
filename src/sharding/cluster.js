@@ -1,8 +1,6 @@
 const Eris = require("eris");
 const Base = require("../structures/Base.js");
-const utils = require("util");
-const { StatsD } = require('node-dogstatsd');
-const ddog = new StatsD();
+const { inspect } = require('util');
 
 /**
  * 
@@ -19,27 +17,34 @@ class Cluster {
     constructor() {
 
         this.shards = 0;
-        this.firstShardID = null;
-        this.lastShardID = null;
+        this.maxShards = 0;
+        this.firstShardID = 0;
+        this.lastShardID = 0;
         this.mainFile = null;
-        this.clusterID = null;
-        this.clusterCount = null;
+        this.clusterID = 0;
+        this.clusterCount = 0;
         this.guilds = 0;
         this.users = 0;
         this.uptime = 0;
         this.exclusiveGuilds = 0;
         this.largeGuilds = 0;
         this.voiceChannels = 0;
+        this.shardsStats = [];
         this.app = null;
         this.bot = null;
         this.test = false;
 
-        console.log = (str) => process.send({ name: "log", msg: str });
-        console.error = (str) => process.send({ name: "error", msg: str });
-        console.warn = (str) => process.send({ name: "warn", msg: str });
-        console.info = (str) => process.send({ name: "info", msg: str });
-        console.debug = (str) => process.send({ name: "debug", msg: str });
+        console.log = (str) => process.send({ name: "log", msg: this.logOverride(str) });
+        console.error = (str) => process.send({ name: "error", msg: this.logOverride(str) });
+        console.warn = (str) => process.send({ name: "warn", msg: this.logOverride(str) });
+        console.info = (str) => process.send({ name: "info", msg: this.logOverride(str) });
+        console.debug = (str) => process.send({ name: "debug", msg: this.logOverride(str) });
 
+    }
+
+    logOverride(message) {
+        if (typeof message == 'object') return inspect(message);
+        else return message;
     }
 
     spawn() {
@@ -54,88 +59,101 @@ class Cluster {
         });
 
 
-        process.on("message", this._handleMessage.bind(this));
-    }
-
-    _handleMessage (msg) {
-        if (msg.name) {
-            switch (msg.name) {
-                case "shards":
-                    if (msg.type && msg.type === "round-robin") {
-                        this.shards = this.shards + msg.shards;
-                        process.send({ type: "log", msg: `Added ${msg.shards} more shards` });
-                    } else if (msg.type && msg.type === "reboot") {
-                        this.shards = msg.shards;
+        process.on("message", msg => {
+            if (msg.name) {
+                switch (msg.name) {
+                    case "connect": {
                         this.firstShardID = msg.firstShardID;
                         this.lastShardID = msg.lastShardID;
                         this.mainFile = msg.file;
                         this.clusterID = msg.id;
                         this.clusterCount = msg.clusterCount;
+                        this.shards = (this.lastShardID - this.firstShardID) + 1;
+                        this.maxShards = msg.maxShards;
+
                         if (this.shards < 1) return;
+
                         if (msg.test) {
                             this.test = true;
                         }
-                        this.connect(msg.firstShardID, msg.lastShardID, msg.maxShards, msg.token, "reboot", msg.clientOptions);
+
+                        this.connect(msg.firstShardID, msg.lastShardID, this.maxShards, msg.token, "connect", msg.clientOptions);
+
+                        break;
                     }
-                    break;
-                case "connect":
-                    this.firstShardID = msg.firstShardID;
-                    this.lastShardID = msg.lastShardID;
-                    this.mainFile = msg.file;
-                    this.clusterID = msg.id;
-                    this.clusterCount = msg.clusterCount;
-                    if (this.shards < 1) return;
-                    if (msg.test) {
-                        this.test = true;
+                    case "stats": {
+                        process.send({
+                            name: "stats", stats: {
+                                guilds: this.guilds,
+                                users: this.users,
+                                uptime: this.uptime,
+                                ram: process.memoryUsage().rss,
+                                shards: this.shards,
+                                exclusiveGuilds: this.exclusiveGuilds,
+                                largeGuilds: this.largeGuilds,
+                                voice: this.voiceChannels,
+                                shardsStats: this.shardsStats
+                            }
+                        });
+
+                        break;
                     }
-                    this.connect(msg.firstShardID, msg.lastShardID, msg.maxShards, msg.token, "connect", msg.clientOptions);
-                    break;
-                case "stats":
-                    process.send({
-                        name: "stats", stats: {
-                            guilds: this.guilds,
-                            users: this.users,
-                            uptime: this.uptime,
-                            ram: process.memoryUsage().rss,
-                            shards: this.shards,
-                            exclusiveGuilds: this.exclusiveGuilds,
-                            largeGuilds: this.largeGuilds,
-                            voice: this.voiceChannels
+                    case "fetchUser": {
+                        if (!this.bot) return;
+                        let id = msg.value;
+                        let user = this.bot.users.get(id);
+                        if (user) {
+                            process.send({ name: "fetchReturn", value: user });
                         }
-                    });
-                    break;
-                case "fetchUser":
-                    ddog.increment('es.fetch.user');
-                    let id = msg.value;
-                    let user = this.bot.users.get(id);
-                    if (user) {
-                        process.send({ name: "fetchReturn", value: user });
+
+                        break;
                     }
-                    break;
-                case "fetchChannel":
-                    ddog.increment('es.fetch.channel');
-                    let id2 = msg.value;
-                    let channel = this.bot.getChannel(id2);
-                    if (channel) {
-                        channel = channel.toJSON();
-                        return process.send({ name: "fetchReturn", value: channel });
+                    case "fetchChannel": {
+                        if (!this.bot) return;
+                        let id = msg.value;
+                        let channel = this.bot.getChannel(id);
+                        if (channel) {
+                            channel = channel.toJSON();
+                            return process.send({ name: "fetchReturn", value: channel });
+                        }
+
+                        break;
                     }
-                    break;
-                case "fetchGuild":
-                    ddog.increment('es.fetch.guild');
-                    let id3 = msg.value;
-                    let guild = this.bot.guilds.get(id3);
-                    if (guild) {
-                        guild = guild.toJSON();
-                        process.send({ name: "fetchReturn", value: guild });
+                    case "fetchGuild": {
+                        if (!this.bot) return;
+                        let id = msg.value;
+                        let guild = this.bot.guilds.get(id);
+                        if (guild) {
+                            guild = guild.toJSON();
+                            process.send({ name: "fetchReturn", value: guild });
+                        }
+
+                        break;
                     }
-                    break;
-                case "fetchReturn":
-                    this.ipc.emit(msg.id, msg.value);
-                    break;
-                case "restart":
-                    process.exit(1);
-                    break;
+                    case "fetchMember": {
+                        if (!this.bot) return;
+                        let [guildID, memberID] = msg.value;
+
+                        let guild = this.bot.guilds.get(guildID);
+                        
+                        if (guild) {
+                            let member = guild.members.get(memberID);
+
+                            if (member) {
+                                member = member.toJSON();
+                                process.send({ name: "fetchReturn", value: member });
+                            }
+                        }
+
+                        break;
+                    }
+                    case "fetchReturn":
+                        this.ipc.emit(msg.id, msg.value);
+                        break;
+                    case "restart":
+                        process.exit(1);
+                        break;
+                }
             }
         }
     }
@@ -151,24 +169,19 @@ class Cluster {
      * @memberof Cluster
      */
     connect(firstShardID, lastShardID, maxShards, token, type, clientOptions) {
-        switch (type) {
-            case "connect":
-                process.send({ name: "log", msg: `Connecting with ${this.shards} shards` });
-                break;
-            case "reboot":
-                process.send({ name: "log", msg: `Rebooting with ${this.shards} shards` });
-                break;
-        }
-
+        process.send({ name: "log", msg: `Connecting with ${this.shards} shard(s)` });
 
         let options = { autoreconnect: true, firstShardID: firstShardID, lastShardID: lastShardID, maxShards: maxShards };
         let optionss = Object.keys(options);
         optionss.forEach(key => {
             delete clientOptions[key];
         });
+
         Object.assign(options, clientOptions);
+
         const bot = new Eris(token, options);
         this.bot = bot;
+
         bot.on("connect", id => {
             ddog.increment('es.event.connect');
             process.send({ name: "log", msg: `Shard ${id} established connection!` });
@@ -257,7 +270,7 @@ class Cluster {
             this.loadCode(bot);
         }
     }
-    
+
     loadCode(bot) {
         let rootPath = process.cwd();
         rootPath = rootPath.replace(`\\`, "/");
@@ -282,6 +295,15 @@ class Cluster {
             this.voiceChannels = bot.voiceConnections.size;
             this.largeGuilds = bot.guilds.filter(g => g.large).length;
             this.exclusiveGuilds = bot.guilds.filter(g => g.members.filter(m => m.bot).length === 1).length;
+            this.shardsStats = [];
+            this.bot.shards.forEach(shard => {
+                this.shardsStats.push({
+                    id: shard.id,
+                    ready: shard.ready,
+                    latency: shard.latency,
+                    status: shard.status
+                });
+            });
         }, 1000 * 5);
     }
 }
